@@ -49,7 +49,7 @@ async function main(): Promise<void> {
     page.on('pageerror', error => errors.push(error.message))
     await page.route(/^https?:/, route => route.abort())
     await page.getByRole('tab').first().waitFor()
-    await page.locator('.excalidraw canvas').first().waitFor()
+    await page.locator('.excalidraw canvas, .notebook-body textarea').first().waitFor()
     return { instance, page }
   }
   try {
@@ -121,6 +121,22 @@ async function main(): Promise<void> {
     }
     await waitFor(async () => JSON.parse(await fs.readFile(file, 'utf8')).elements as { text?: string }[],
       elements => ['Primeiro texto', 'Segundo texto'].every(word => elements.some(el => el.text === word)), 'dois textos independentes')
+    await page.getByRole('button', { name: 'Ampliar área de desenho' }).click()
+    await page.getByRole('button', { name: 'Espaço de trabalho', exact: true }).click()
+    await page.getByRole('button', { name: 'Novo bloco de notas' }).click()
+    await page.getByRole('textbox', { name: 'Nome', exact: true }).fill('ADR de cache')
+    await page.getByRole('combobox', { name: 'Modelo' }).selectOption('adr')
+    await page.getByRole('button', { name: 'Criar', exact: true }).click()
+    const notebook = page.getByRole('textbox', { name: 'Conteúdo da anotação' })
+    assert.match(await notebook.inputValue(), /Alternativas consideradas/)
+    await notebook.fill('# Cache\n\n## Decisão\nUsar cache por sessão.')
+    await notebook.press('Control+s')
+    await waitFor(() => fs.readFile(path.join(workspace, 'ADR de cache.md'), 'utf8'), text => text.includes('cache por sessão'), 'nota Markdown no disco')
+    await page.getByRole('button', { name: 'Sair da tela cheia' }).click()
+    await close(app); app = undefined
+    // Session restoration can now open either a notebook or a canvas.
+    launched = await launch(); app = launched.instance; page = launched.page
+    assert.match(await page.getByRole('textbox', { name: 'Conteúdo da anotação' }).inputValue(), /cache por sessão/)
     await fs.mkdir('test-results', { recursive: true })
     await page.screenshot({ path: 'test-results/workspace.png' })
     assert.deepEqual(errors, [], 'O renderer não deve produzir erros JavaScript.')

@@ -83,6 +83,8 @@ O workflow publica um instalador numerado no GitHub Releases após os testes de 
 
 - Use **Nova pasta** na lista de projetos para criar pastas e subpastas. Em **Novo desenho**, informe o nome e selecione a pasta de destino. O botão **+** na barra de abas abre um rascunho.
 - No quadro, **Nova nota** cria um cartão com texto, fonte, tamanho e cor do papel. Dê dois cliques na nota para editar o texto. O menu do quadro também tem **Escrever vários textos** para manter a ferramenta de texto ativa entre inserções.
+- **Novo bloco de notas** cria um arquivo independente em Markdown ou TXT. Os modelos de decisão de arquitetura, contrato de API e incidente ficam em **Markdown**. Títulos Markdown formam o índice lateral. As notas compartilham as abas, o salvamento automático e a restauração da sessão com os desenhos.
+- Em tela cheia, **Espaço de trabalho** abre o painel com as abas, os arquivos e os detalhes do documento ativo. Ao abrir outro arquivo, o painel se recolhe.
 - O botão **Ampliar área de desenho** ao lado de **Código** coloca o quadro em tela cheia. Use o mesmo botão para voltar.
 
 O instalador associa a extensão `.excalidraw` ao aplicativo. O projeto não inclui certificado de assinatura; versões distribuídas publicamente devem configurar a assinatura do executável. O empacotamento para macOS/Linux não foi configurado nesta versão.

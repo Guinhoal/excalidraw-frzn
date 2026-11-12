@@ -3,7 +3,7 @@ import type { OpenedProject } from '../../shared/contracts'
 import { useProjects, type Scene, type ProjectTab } from './store'
 
 const saving = new Map<string, Promise<boolean>>()
-export const filename = (path: string) => path.split(/[\\/]/).at(-1)!.replace(/\.excalidraw$/i, '')
+export const filename = (path: string) => path.split(/[\\/]/).at(-1)!.replace(/\.(excalidraw|md|txt)$/i, '')
 
 export function serialize(scene: Scene): string {
   return serializeAsJSON(scene.elements, scene.appState, scene.files, 'local')
@@ -25,6 +25,12 @@ export async function openProjects(projects: OpenedProject[]): Promise<void> {
   for (const project of projects) {
     const existing = useProjects.getState().tabs.find(tab => tab.path?.toLowerCase() === project.path.toLowerCase())
     if (existing) { useProjects.getState().activate(existing.id); continue }
+    const extension = project.path.split('.').pop()?.toLowerCase()
+    if (extension === 'md' || extension === 'txt') {
+      useProjects.getState().add({ id: crypto.randomUUID(), title: filename(project.path), path: project.path, format: extension,
+        scene: blankScene(), serialized: project.content, savedText: project.content, revision: 0, savedRevision: 0, saving: false })
+      continue
+    }
     const restored = await loadFromBlob(new Blob([project.content], { type: 'application/json' }), null, null)
     const scene: Scene = { elements: restored.elements, appState: restored.appState || {}, files: restored.files || {} }
     useProjects.getState().add({ id: crypto.randomUUID(), title: filename(project.path), path: project.path, scene, serialized: serialize(scene), revision: 0, savedRevision: 0, saving: false })
@@ -39,9 +45,9 @@ export function saveProject(id: string, saveAs = false): Promise<boolean> {
     if (!saveAs && tab.path && tab.revision === tab.savedRevision && !tab.error) return true
     useProjects.getState().patch(id, { saving: true, error: undefined })
     try {
-      const path = await window.desktop.save({ path: tab.path, title: tab.title, content: tab.serialized, saveAs })
+      const path = await window.desktop.save({ format: tab.format, previousText: tab.savedText, path: tab.path, title: tab.title, content: tab.serialized, saveAs })
       if (!path) return false
-      useProjects.getState().patch(id, { path, title: filename(path), savedRevision: tab.revision, savedAt: Date.now() })
+      useProjects.getState().patch(id, { path, title: filename(path), savedRevision: tab.revision, savedText: tab.format ? tab.serialized : undefined, savedAt: Date.now() })
       return true
     } catch (error) {
       useProjects.getState().patch(id, { error: String(error) })

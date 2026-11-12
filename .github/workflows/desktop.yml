@@ -15,11 +15,13 @@ jobs:
         with:
           node-version: 24
       - name: Instalar dependências
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Testar arquivos e SVG
         run: npm test
       - name: Compilar e verificar integração desktop
         run: npm run test:smoke
+      - name: Verificar avisos de segurança antes de empacotar
+        run: npm audit --audit-level=high
       - name: Gerar instalador Windows
         run: npx electron-builder --win nsis --publish never --config.extraMetadata.frznBuild=${{ github.run_number }} --config.nsis.artifactName=Excalidraw-FRZN-build-${{ github.run_number }}.exe
         env:

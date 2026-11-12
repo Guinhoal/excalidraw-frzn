@@ -1,6 +1,6 @@
 {
   "name": "excalidraw-frzn",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Workspace desktop local para desenhos e código",
   "main": "./out/main/index.js",
   "author": "Thiago Arthur",

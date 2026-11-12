@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Check, ChevronDown, ChevronRight, Circle, Code2, File, FilePlus2, Folder, FolderOpen, FolderPlus, HardDrive, Layers3, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Save, Search, Sun, X } from 'lucide-react'
+import { ArrowUpRight, BookOpen, NotebookPen, Check, ChevronDown, ChevronRight, Circle, Code2, File, FilePlus2, Folder, FolderOpen, FolderPlus, HardDrive, Layers3, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Save, Search, Sun, X } from 'lucide-react'
 import brandLogo from './assets/brand/frzn-lockup-horizontal.svg'
+import { Notebook, noteTemplate } from './Notebook'
 import { ProjectDialog } from './ProjectDialog'
 import { UpdateNotice } from './UpdateNotice'
 import { Canvas, type CanvasHandle } from './Canvas'
@@ -12,7 +13,7 @@ function Tree({ entries, filter, activePath, open }: { entries: ProjectEntry[]; 
   return <>{entries.map(entry => {
     if (entry.kind === 'folder') return <FolderBranch key={entry.path} entry={entry} filter={filter} activePath={activePath} open={open}/>
     if (filter && !entry.name.toLowerCase().includes(filter.toLowerCase())) return null
-    return <button key={entry.path} className={`tree-file ${entry.path === activePath ? 'selected' : ''}`} title={entry.path} onClick={() => open(entry.path)}><File size={15}/><span>{entry.name.replace(/\.excalidraw$/i, '')}</span>{entry.path === activePath && <span className="active-dot"/>}</button>
+    return <button key={entry.path} className={`tree-file ${entry.path === activePath ? 'selected' : ''}`} title={entry.path} onClick={() => open(entry.path)}>{ /\.(md|txt)$/i.test(entry.name) ? <BookOpen size={15}/> : <File size={15}/> }<span>{entry.name.replace(/\.(excalidraw|md|txt)$/i, '')}</span>{entry.path === activePath && <span className="active-dot"/>}</button>
   })}</>
 }
 function FolderBranch({ entry, ...props }: { entry: ProjectEntry; filter: string; activePath?: string; open(path: string): void }) {
@@ -27,9 +28,10 @@ export function App() {
   const active = tabs.find(tab => tab.id === activeId)
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null)
   const [sidebar, setSidebar] = useState(true)
-  const workspaceElement = useRef<HTMLElement>(null)
+  const workspaceElement = useRef<HTMLDivElement>(null)
   const [fullscreen, setFullscreen] = useState(false)
-  const [creating, setCreating] = useState<'file' | 'folder' | null>(null)
+  const [creating, setCreating] = useState<'file' | 'folder' | 'note' | null>(null)
+  const [drawer, setDrawer] = useState(false)
   const [filter, setFilter] = useState('')
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [ready, setReady] = useState(false)
@@ -43,7 +45,7 @@ export function App() {
     try { await action() } catch (error) { setMessage(String(error)) }
   }, [])
   useEffect(() => {
-    const syncFullscreen = () => setFullscreen(document.fullscreenElement === workspaceElement.current)
+    const syncFullscreen = () => { setFullscreen(document.fullscreenElement === workspaceElement.current); setDrawer(false) }
     document.addEventListener('fullscreenchange', syncFullscreen)
     return () => document.removeEventListener('fullscreenchange', syncFullscreen)
   }, [])
@@ -56,7 +58,7 @@ export function App() {
   }, [run])
 
   const refresh = useCallback(async () => { setWorkspace(await window.desktop.workspace()) }, [])
-  const open = useCallback(async (path?: string) => { await openProjects(await window.desktop.open(path)) }, [])
+  const open = useCallback(async (path?: string) => { await openProjects(await window.desktop.open(path)); setDrawer(false) }, [])
 
   useEffect(() => {
     const removeOpen = window.desktop.onOpenFiles(projects => { void run(() => openProjects(projects)) })
@@ -144,7 +146,8 @@ export function App() {
     return () => { window.removeEventListener('keydown', keydown, true); window.removeEventListener('focus', focus) }
   }, [activate, closeTab, open, refresh, run, save])
 
-  return <div className="app-shell" inert={isClosing}>
+  const note = Boolean(active?.format)
+  return <div ref={workspaceElement} className="app-shell" inert={isClosing}>
     <header className="app-header">
       <div className="brand">
         <img src={brandLogo} alt="FRZN" />
@@ -155,29 +158,39 @@ export function App() {
         {theme === 'light' ? <Moon size={17}/> : <Sun size={17}/>}
       </button>
     </header>
-    {creating && workspace && <ProjectDialog kind={creating} workspace={workspace} onClose={() => setCreating(null)} onCreate={async (directory, name) => {
+    {creating && workspace && <ProjectDialog kind={creating} workspace={workspace} onClose={() => setCreating(null)} onCreate={async (directory, name, template, noteFormat) => {
       if (creating === 'folder') await window.desktop.createFolder(directory, name)
       else {
-        const content = serialize(blankScene())
-        const path = await window.desktop.save({ directory, title: name, content })
-        if (path) await openProjects([{ path, content }])
+        const format = creating === 'note' ? noteFormat : 'excalidraw'
+        const content = format === 'excalidraw' ? serialize(blankScene()) : format === 'md' ? noteTemplate(template, name) : ''
+        const path = await window.desktop.save({ directory, title: name, format, content })
+        if (path) { await openProjects([{ path, content }]); setDrawer(false) }
       }
       await refresh()
     }}/>}
     <div className="app-body">
-      {sidebar && <aside className="sidebar"><div className="workspace-heading"><span>ESPAÇO DE TRABALHO</span><button className="icon-button" aria-label="Recolher projetos" onClick={() => setSidebar(false)}><PanelLeftClose size={16}/></button></div><button className="workspace-picker" title={workspace?.root} onClick={() => void run(async () => { const selected = await window.desktop.chooseWorkspace(); if (selected) setWorkspace(selected) })}><span className="folder-badge"><FolderOpen size={19}/></span><div><strong>{workspace?.root.split(/[\\/]/).at(-1) || 'Meus projetos'}</strong><small>Pasta local <ArrowUpRight size={11}/></small></div><ChevronDown size={14}/></button>
+      {fullscreen && <button className="workspace-fab" aria-controls="workspace-sidebar" aria-expanded={drawer} onClick={() => setDrawer(!drawer)}><PanelLeftOpen size={16}/>Espaço de trabalho</button>}
+      {fullscreen && drawer && <button className="drawer-backdrop" aria-label="Fechar painel" onClick={() => setDrawer(false)}/>}
+      {(fullscreen ? drawer : sidebar) && <aside id="workspace-sidebar" className="sidebar"><div className="workspace-heading"><span>ESPAÇO DE TRABALHO</span><button className="icon-button" aria-label="Recolher projetos" onClick={() => fullscreen ? setDrawer(false) : setSidebar(false)}><PanelLeftClose size={16}/></button></div><button className="workspace-picker" title={workspace?.root} onClick={() => void run(async () => { const selected = await window.desktop.chooseWorkspace(); if (selected) setWorkspace(selected) })}><span className="folder-badge"><FolderOpen size={19}/></span><div><strong>{workspace?.root.split(/[\\/]/).at(-1) || 'Meus projetos'}</strong><small>Pasta local <ArrowUpRight size={11}/></small></div><ChevronDown size={14}/></button>
         <button className="button new-project" disabled={!workspace} onClick={() => setCreating('file')}><Plus size={17}/> Novo desenho<span>Ctrl N</span></button>
+        <button className="button new-notebook" disabled={!workspace} onClick={() => setCreating('note')}><NotebookPen size={16}/>Novo bloco de notas</button>
+        {fullscreen && <nav className="drawer-tabs" aria-label="Documentos abertos"><strong>Abas abertas</strong>{tabs.map(tab =>
+          <button key={tab.id} aria-current={tab.id === activeId ? 'page' : undefined} onClick={() => { activate(tab.id); setDrawer(false) }}>{tab.format ? <BookOpen size={14}/> : <Layers3 size={14}/>} {tab.title}</button>
+        )}</nav>}
         <label className="search-box"><Search size={15}/><input aria-label="Buscar projetos" placeholder="Buscar um projeto…" value={filter} onChange={event => setFilter(event.target.value)}/></label>
         <div className="project-list-heading"><span>PROJETOS</span><div><button className="icon-button" title="Nova pasta" aria-label="Nova pasta" disabled={!workspace} onClick={() => setCreating('folder')}><FolderPlus size={15}/></button><button className="icon-button" aria-label="Abrir projeto" title="Abrir projeto (Ctrl+O)" onClick={() => void run(() => open())}><FolderOpen size={15}/></button><button className="icon-button" aria-label="Atualizar projetos" onClick={() => void run(refresh)}><RefreshCw size={14}/></button></div></div>
         <nav className="project-tree" aria-label="Projetos locais"><Tree entries={workspace?.entries || []} filter={filter} activePath={active?.path} open={path => void run(() => open(path))}/>{!workspace?.entries.length && <div className="empty-projects"><FilePlus2 size={26}/><p>Ideias merecem espaço.</p><span>Crie seu primeiro desenho.<br/>Ele será salvo nesta pasta.</span></div>}</nav>
-        <div className="sidebar-bottom"><div><HardDrive size={17}/><strong>Local por natureza</strong><span className="status-dot"/></div><p>Desenhos e código juntos.<br/>Sem conta, prontos para ficar com você.</p></div>
+        <div className="sidebar-bottom"><div><HardDrive size={16}/><strong>Documento ativo</strong></div>
+          <p>{active?.title || '—'}<br/>{note ? (active?.format === 'txt' ? 'Texto simples' : 'Markdown') : `${active?.scene.elements.filter(el => !el.isDeleted).length ?? 0} elementos no desenho`}</p>
+          {active?.path && <small title={active.path}>{active.path}</small>}
+        </div>
       </aside>}
-      <main ref={workspaceElement} className="main-workspace"><div className="tabbar">{!sidebar && <button className="icon-button sidebar-toggle" aria-label="Mostrar projetos" onClick={() => setSidebar(true)}><PanelLeftOpen size={17}/></button>}<div className="tabs" role="tablist" aria-label="Desenhos abertos">{tabs.map(tab => <div key={tab.id} className={`tab ${activeId === tab.id ? 'active' : ''}`}><button role="tab" aria-selected={activeId === tab.id} onClick={() => activate(tab.id)} title={tab.path || tab.title}><File size={14}/><span>{tab.title}</span>{isDirty(tab) && <Circle size={7} fill="currentColor"/>}</button><button className="close-tab" aria-label={`Fechar ${tab.title}`} disabled={closingTab === tab.id} onClick={() => void run(() => closeTab(tab.id))}><X size={13}/></button></div>)}</div><button className="icon-button add-tab" aria-label="Nova aba" onClick={newProject}><Plus size={17}/></button></div>
-        <div className="document-toolbar"><div className="document-title"><span className="document-symbol"><Layers3 size={17}/></span><div><strong>{active?.title || 'Carregando espaço…'}</strong><span>{active?.path ? '.excalidraw · Salvo no computador' : 'Novo desenho · Salvamento automático ao editar'}</span></div></div><div className="document-actions"><button className="button secondary" disabled={!active} onClick={() => canvas.current?.addCode()}><Code2 size={16}/>Bloco de código</button><button className="button ghost" disabled={!active || active.saving} onClick={() => void run(() => save(true))}>Salvar como</button><button className="button primary" disabled={!active || active.saving} onClick={() => void run(() => save())}><Save size={15}/>{active?.saving ? 'Salvando…' : 'Salvar'}</button></div></div>
+      <main className="main-workspace" inert={fullscreen && drawer}><div className="tabbar">{!sidebar && <button className="icon-button sidebar-toggle" aria-label="Mostrar projetos" onClick={() => setSidebar(true)}><PanelLeftOpen size={17}/></button>}<div className="tabs" role="tablist" aria-label="Documentos abertos">{tabs.map(tab => <div key={tab.id} className={`tab ${activeId === tab.id ? 'active' : ''}`}><button role="tab" aria-selected={activeId === tab.id} onClick={() => activate(tab.id)} title={tab.path || tab.title}>{tab.format ? <BookOpen size={14}/> : <File size={14}/>}<span>{tab.title}</span>{isDirty(tab) && <Circle size={7} fill="currentColor"/>}</button><button className="close-tab" aria-label={`Fechar ${tab.title}`} disabled={closingTab === tab.id} onClick={() => void run(() => closeTab(tab.id))}><X size={13}/></button></div>)}</div><button className="icon-button add-tab" aria-label="Nova aba" onClick={newProject}><Plus size={17}/></button></div>
+        <div className="document-toolbar"><div className="document-title"><span className="document-symbol">{note ? <NotebookPen size={17}/> : <Layers3 size={17}/>}</span><div><strong>{active?.title || 'Carregando espaço…'}</strong><span>{active?.path ? `.${active.format || 'excalidraw'} · Arquivo local` : 'Novo desenho · Salvamento automático ao editar'}</span></div></div><div className="document-actions">{!note && <button className="button secondary" disabled={!active} onClick={() => canvas.current?.addCode()}><Code2 size={16}/>Bloco de código</button>}<button className="button ghost" disabled={!active || active.saving} onClick={() => void run(() => save(true))}>Salvar como</button><button className="button primary" disabled={!active || active.saving} onClick={() => void run(() => save())}><Save size={15}/>{active?.saving ? 'Salvando…' : 'Salvar'}</button></div></div>
         {message && <div className="error-banner" role="alert"><span>{message}</span><button className="icon-button" aria-label="Dispensar aviso" onClick={() => setMessage('')}><X size={16}/></button></div>}
         {active?.error && <div className="error-banner" role="alert"><span>Falha ao salvar: {active.error}</span><button className="button ghost" onClick={() => void run(() => save())}>Tentar novamente</button></div>}
-        <div className="canvas-wrap">{ready && active ? <Canvas ref={canvas} key={active.id} tabId={active.id} title={active.title} theme={theme} fullscreen={fullscreen} onToggleFullscreen={toggleFullscreen}/> : <div className="loading-overlay">Preparando seu espaço de trabalho…</div>}</div>
-        <footer className="statusbar"><div className={active?.error ? 'save-error' : ''}>{active?.error ? <Circle size={9}/> : active?.saving ? <RefreshCw size={12} className="spinning"/> : <Check size={13}/>}<span>{active?.error ? 'Alterações pendentes' : active?.saving ? 'Salvando no computador…' : active && isDirty(active) ? 'Salvamento automático em instantes' : active?.path ? 'Todas as alterações salvas' : 'Pronto para desenhar'}</span></div><div><span>{tabs.length} {tabs.length === 1 ? 'aba aberta' : 'abas abertas'}</span><span className="status-divider"/><span>Duplo clique para editar blocos de código</span></div></footer>
+        <div className="canvas-wrap">{ready && active ? (note ? <Notebook key={active.id} tab={active} fullscreen={fullscreen} onFullscreen={toggleFullscreen}/> : <Canvas ref={canvas} key={active.id} tabId={active.id} title={active.title} theme={theme} fullscreen={fullscreen} onToggleFullscreen={toggleFullscreen}/>) : <div className="loading-overlay">Preparando seu espaço de trabalho…</div>}</div>
+        <footer className="statusbar"><div className={active?.error ? 'save-error' : ''}>{active?.error ? <Circle size={9}/> : active?.saving ? <RefreshCw size={12} className="spinning"/> : <Check size={13}/>}<span>{active?.error ? 'Alterações pendentes' : active?.saving ? 'Salvando no computador…' : active && isDirty(active) ? 'Salvamento automático em instantes' : active?.path ? 'Todas as alterações salvas' : 'Pronto para desenhar'}</span></div><div><span>{tabs.length} {tabs.length === 1 ? 'aba aberta' : 'abas abertas'}</span><span className="status-divider"/><span>{note ? 'Ctrl+S para salvar' : 'Duplo clique para editar blocos de código'}</span></div></footer>
       </main>
     </div>
   </div>

@@ -5,6 +5,7 @@ import path from 'node:path'
 import os from 'node:os'
 import { atomicWrite, authorizeWorkspaceFile, createFolder, createProject, readTree, safeTitle, workspaceDirectory } from '../src/main/storage.ts'
 import { validateScene } from '../src/shared/scene.ts'
+import { documentFormat, validateDocument } from '../src/main/documents.ts'
 
 test('organiza desenhos em subpastas e rejeita destinos externos e nomes duplicados', async t => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'frzn-tree-'))
@@ -50,17 +51,29 @@ test('falha ao gravar não danifica outros projetos e limpa temporários', async
   assert.equal((await fs.readdir(root)).some(file => file.endsWith('.tmp')), false)
 })
 
-test('listagem mantém subpastas e filtra arquivos que não são desenhos', async t => {
+test('listagem mantém desenhos e notas em subpastas, filtrando outros formatos', async t => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'frzn-test-'))
   t.after(() => fs.rm(root, { recursive: true, force: true }))
   await fs.mkdir(path.join(root, 'Arquitetura'))
   await fs.writeFile(path.join(root, 'Arquitetura', 'API.excalidraw'), '{}')
   await fs.writeFile(path.join(root, 'rascunho.EXCALIDRAW'), '{}')
-  await fs.writeFile(path.join(root, 'segredo.txt'), 'não listar')
+  await fs.writeFile(path.join(root, 'arquivo.bin'), 'não listar')
+  await createProject(root, 'Decisões', '# Decisões', 'md')
+  await createProject(root, 'Rascunho', 'Texto livre', 'txt')
   const tree = await readTree(root)
-  assert.equal(tree.length, 2)
+  assert.equal(tree.length, 4)
+  assert.ok(tree.some(entry => entry.name === 'Decisões.md'))
+  assert.ok(tree.some(entry => entry.name === 'Rascunho.txt'))
   assert.equal(tree[0].kind, 'folder')
   assert.equal(tree[0].children?.[0].name, 'API.excalidraw')
+})
+
+test('salvamento de texto suporta UTF-8 e rejeita extensões, dados binários e tamanho inválidos', () => {
+  assert.equal(documentFormat('reunião.TXT'), 'txt')
+  assert.doesNotThrow(() => validateDocument('md', '# Decisões\r\n\n<script>texto literal</script>'))
+  assert.throws(() => documentFormat('externo.js'))
+  assert.throws(() => validateDocument('txt', 'a\0b'))
+  assert.throws(() => validateDocument('md', 'é'.repeat(2 * 1024 * 1024 + 1)))
 })
 
 test('acesso a arquivos fora do workspace é rejeitado', async t => {

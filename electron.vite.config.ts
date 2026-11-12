@@ -10,7 +10,12 @@ export default defineConfig({
   main: { plugins: [externalizeDepsPlugin()] },
   preload: { plugins: [externalizeDepsPlugin()] },
   renderer: {
-    plugins: [react()],
+    plugins: [react(), {
+      name: 'desktop-production-csp',
+      apply: 'build',
+      transformIndexHtml: html => html.replace("script-src 'self' 'unsafe-inline'", "script-src 'self'")
+        .replace("connect-src 'self' ws://localhost:* http://localhost:*", "connect-src 'self'")
+    }],
     build: { chunkSizeWarningLimit: 2500, license: { fileName: 'THIRD-PARTY-LICENSES.md' } },
     server: {
       fs: { allow: [resolve('.')] }

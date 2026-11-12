@@ -4,7 +4,7 @@ import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, FONT_FAMI
 import type { ExcalidrawImperativeAPI, AppState, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawImageElement, FileId } from '@excalidraw/excalidraw/element/types'
 import { Code2, Maximize2, Minimize2, Pencil, StickyNote, Type } from 'lucide-react'
-import { NoteDialog, type NoteOptions } from './NoteDialog'
+import { NoteDialog, noteInk, type NoteOptions } from './NoteDialog'
 import { isCodeData, renderCode, type CodeData } from './code'
 import { serialize } from './projects'
 import { useProjects } from './store'
@@ -33,8 +33,7 @@ export const Canvas = memo(forwardRef<CanvasHandle, CanvasProps>(function Canvas
     if (!editor) return
     const state = editor.getAppState()
     const center = viewportCoordsToSceneCoords({ clientX: state.offsetLeft + state.width / 2, clientY: state.offsetTop + state.height / 2 }, state)
-    const [r, g, b] = [1, 3, 5].map(i => parseInt(background.slice(i, i + 2), 16))
-    const ink = (r * 299 + g * 587 + b * 114) / 1000 > 145 ? '#181818' : '#ffffff'
+    const ink = noteInk(background)
     const elements = convertToExcalidrawElements([{
       type: 'rectangle', x: center.x - 150, y: center.y - 65, width: 300, height: 130,
       backgroundColor: background, fillStyle: 'solid', roughness: 0, strokeColor: 'transparent',

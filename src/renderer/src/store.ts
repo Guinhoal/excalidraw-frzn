@@ -11,8 +11,10 @@ export interface ProjectTab {
   id: string
   title: string
   path?: string
+  format?: 'md' | 'txt'
   scene: Scene
   serialized: string
+  savedText?: string
   revision: number
   savedRevision: number
   saving: boolean

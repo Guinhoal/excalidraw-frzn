@@ -19,10 +19,10 @@ export async function atomicWrite(filePath: string, content: string): Promise<vo
 }
 
 // A new project never overwrites a file with an existing title.
-export async function createProject(root: string, title: string, content: string): Promise<string> {
-  const base = safeTitle(title)
+export async function createProject(root: string, title: string, content: string, extension: 'excalidraw' | 'md' | 'txt' = 'excalidraw'): Promise<string> {
+  const base = safeTitle(title.replace(new RegExp('\\.' + extension + '$', 'i'), ''))
   for (let index = 0; index < 10000; index++) {
-    const target = path.join(root, `${base}${index ? ` (${index + 1})` : ''}.excalidraw`)
+    const target = path.join(root, `${base}${index ? ` (${index + 1})` : ''}.${extension}`)
     try {
       await fs.writeFile(target, content, { encoding: 'utf8', flag: 'wx' })
       return target
@@ -42,7 +42,7 @@ export async function readTree(root: string, depth = 0): Promise<ProjectEntry[]>
     const fullPath = path.join(root, item.name)
     if (item.isDirectory()) {
       result.push({ name: item.name, path: fullPath, kind: 'folder', children: await readTree(fullPath, depth + 1).catch(() => []) })
-    } else if (item.isFile() && /\.excalidraw$/i.test(item.name)) {
+    } else if (item.isFile() && /\.(excalidraw|md|txt)$/i.test(item.name)) {
       result.push({ name: item.name, path: fullPath, kind: 'file' })
     }
   }
@@ -52,7 +52,7 @@ export async function readTree(root: string, depth = 0): Promise<ProjectEntry[]>
 export async function authorizeWorkspaceFile(root: string, requested: string): Promise<string> {
   const [realRoot, realFile] = await Promise.all([fs.realpath(root), fs.realpath(requested)])
   const relative = path.relative(realRoot, realFile)
-  if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) || !/\.excalidraw$/i.test(realFile)) {
+  if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) || relative.split(path.sep).some(part => part.startsWith('.')) || !/\.(excalidraw|md|txt)$/i.test(realFile)) {
     throw new Error('O arquivo não pertence à pasta de projetos autorizada.')
   }
   return realFile

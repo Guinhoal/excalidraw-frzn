@@ -13,7 +13,7 @@ export interface DesktopAPI {
   workspace(): Promise<WorkspaceInfo>
   chooseWorkspace(): Promise<WorkspaceInfo | null>
   open(path?: string): Promise<OpenedProject[]>
-  save(input: { path?: string; directory?: string; title: string; content: string; saveAs?: boolean }): Promise<string | null>
+  save(input: { format?: 'excalidraw' | 'md' | 'txt'; previousText?: string; path?: string; directory?: string; title: string; content: string; saveAs?: boolean }): Promise<string | null>
   session(): Promise<Session>
   saveSession(session: Session): Promise<void>
   onClosing(callback: () => Promise<void>): () => void

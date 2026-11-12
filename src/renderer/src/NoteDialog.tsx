@@ -4,6 +4,11 @@ import { FONT_FAMILY } from '@excalidraw/excalidraw'
 export interface NoteOptions { text: string; background: string; font: keyof typeof FONT_FAMILY; size: number }
 const fonts: NoteOptions['font'][] = ['Excalifont', 'Nunito', 'Comic Shanns', 'Lilita One', 'Cascadia']
 
+export function noteInk(background: string) {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(background.slice(i, i + 2), 16))
+  return (r * 299 + g * 587 + b * 114) / 1000 > 145 ? '#181818' : '#ffffff'
+}
+
 export function NoteDialog({ onInsert, onClose }: { onInsert(note: NoteOptions): void; onClose(): void }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [text, setText] = useState('')
@@ -14,7 +19,7 @@ export function NoteDialog({ onInsert, onClose }: { onInsert(note: NoteOptions):
   return <dialog ref={dialog} className="workspace-dialog" onCancel={onClose} aria-labelledby="note-heading">
     <form onSubmit={e => { e.preventDefault(); if (text.trim()) { onInsert({ text, background, font, size }); onClose() } }}>
       <h2 id="note-heading">Nova nota</h2>
-      <label>Texto<textarea autoFocus rows={5} required maxLength={10000} value={text} onChange={e => setText(e.target.value)}/></label>
+      <label>Texto<textarea autoFocus rows={5} className="paper-preview" style={{ backgroundColor: background, color: noteInk(background), fontFamily: font, fontSize: size }} required maxLength={10000} value={text} onChange={e => setText(e.target.value)}/></label>
       <div className="note-format">
         <label>Fonte<select value={font} onChange={e => setFont(e.target.value as NoteOptions['font'])}>{fonts.map(f => <option key={f}>{f}</option>)}</select></label>
         <label>Tamanho<select value={size} onChange={e => setSize(Number(e.target.value))}>{[16, 20, 28, 36].map(n => <option key={n} value={n}>{n} px</option>)}</select></label>
