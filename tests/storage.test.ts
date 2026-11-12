@@ -65,7 +65,7 @@ test('acesso a arquivos fora do workspace é rejeitado', async t => {
 test('nomes do Windows e tentativas de travessia de pasta são normalizados', () => {
   assert.equal(safeTitle('CON'), 'Sem título')
   assert.equal(safeTitle('NUL.excalidraw'), 'Sem título')
-  assert.equal(safeTitle('  Ideias.excalidraw '), 'Ideias.excalidraw')
+  assert.equal(safeTitle('  Ideias.excalidraw '), 'Ideias')
   assert.equal(/[\\/<>:"|?*]/.test(safeTitle('../../teste:abc')), false)
 })
 

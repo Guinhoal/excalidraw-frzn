@@ -11,6 +11,8 @@ let preferencesPath: string
 let session: Session = { paths: [] }
 let allowClose = false
 let closing = false
+let rendererReady = false
+let closeTimer: ReturnType<typeof setTimeout> | undefined
 const authorized = new Set<string>()
 const pendingFiles: string[] = []
 let preferencesQueue = Promise.resolve()
@@ -76,7 +78,7 @@ function registerIPC(): void {
     if (input.saveAs) {
       const result = await dialog.showSaveDialog(window!, { title: 'Salvar desenho como', defaultPath: target || path.join(root, `${safeTitle(input.title)}.excalidraw`), filters: [{ name: 'Excalidraw', extensions: ['excalidraw'] }] })
       if (result.canceled || !result.filePath) return null
-      target = result.filePath.endsWith('.excalidraw') ? result.filePath : `${result.filePath}.excalidraw`
+      target = result.filePath.toLowerCase().endsWith('.excalidraw') ? result.filePath : `${result.filePath}.excalidraw`
       // This path has been explicitly approved in the native save dialog.
       await atomicWrite(target, input.content)
       authorized.add(target)
@@ -96,6 +98,7 @@ function registerIPC(): void {
     await persistPreferences()
   })
   handle('app:close-ready', async (error?: string) => {
+    clearTimeout(closeTimer)
     closing = false
     if (error) {
       await dialog.showMessageBox(window!, { type: 'error', message: 'Não foi possível salvar todos os projetos.', detail: `${error}\nA janela continuará aberta para você tentar salvar novamente.`, buttons: ['Voltar ao aplicativo'] })
@@ -108,6 +111,7 @@ function registerIPC(): void {
 
 function createWindow(): void {
   allowClose = false
+  rendererReady = false
   window = new BrowserWindow({
     title: 'Excalidraw FRZN', width: 1440, height: 940, minWidth: 960, minHeight: 650,
     backgroundColor: '#141517', show: false, autoHideMenuBar: true,
@@ -119,12 +123,28 @@ function createWindow(): void {
     return { action: 'deny' }
   })
   window.webContents.on('will-navigate', event => event.preventDefault())
+  const recoverClose = async () => {
+    if (!window || allowClose) return
+    const result = await dialog.showMessageBox(window, {
+      type: 'warning', message: 'O editor não respondeu ao pedido de salvar.',
+      detail: 'Você pode continuar no aplicativo ou fechar sem salvar as alterações pendentes. Os arquivos já gravados serão mantidos.',
+      buttons: ['Continuar no aplicativo', 'Fechar sem salvar'], defaultId: 0, cancelId: 0
+    })
+    closing = false
+    if (result.response === 1) { allowClose = true; window?.close() }
+  }
+  window.webContents.on('render-process-gone', () => { rendererReady = false })
   window.on('close', event => {
     if (allowClose) return
     event.preventDefault()
-    if (!closing) { closing = true; window?.webContents.send('app:closing') }
+    if (!closing) {
+      closing = true
+      if (!rendererReady) { void recoverClose(); return }
+      window?.webContents.send('app:closing')
+      closeTimer = setTimeout(() => { void recoverClose() }, 15000)
+    }
   })
-  window.on('closed', () => { window = null })
+  window.on('closed', () => { clearTimeout(closeTimer); window = null })
   window.webContents.on('did-finish-load', () => {
     // Renderer asks for session after registering its event listeners.
     closing = false
@@ -159,7 +179,11 @@ else {
     Menu.setApplicationMenu(null)
     createWindow()
     pendingFiles.push(...process.argv.filter(p => /\.excalidraw$/i.test(p)))
-    ipcMain.once('renderer:ready', () => { void deliverFiles(pendingFiles.splice(0)) })
+    ipcMain.on('renderer:ready', event => {
+      if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) return
+      rendererReady = true
+      void deliverFiles(pendingFiles.splice(0))
+    })
     app.on('activate', () => { if (!window) createWindow() })
   }).catch(error => { dialog.showErrorBox('Falha ao iniciar Excalidraw FRZN', String(error)); app.exit(1) })
   app.on('window-all-closed', () => app.quit())

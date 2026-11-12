@@ -1,6 +1,6 @@
 import { forwardRef, lazy, Suspense, useCallback, useImperativeHandle, useRef, useState } from 'react'
 import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, MainMenu, viewportCoordsToSceneCoords } from '@excalidraw/excalidraw'
-import type { ExcalidrawImperativeAPI, AppState, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types/types'
+import type { ExcalidrawImperativeAPI, AppState, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawImageElement, FileId } from '@excalidraw/excalidraw/element/types'
 import { Code2, Pencil } from 'lucide-react'
 import { isCodeData, renderCode, type CodeData } from './code'
@@ -44,8 +44,8 @@ export const Canvas = forwardRef<CanvasHandle, { tab: ProjectTab; theme: 'light'
     const card = await renderCode(data)
     const fileId = crypto.randomUUID() as FileId
     const fileData = `data:image/svg+xml;base64,${btoa(Array.from(new TextEncoder().encode(card.svg), byte => String.fromCharCode(byte)).join(''))}` as DataURL
-    const elements = editor.getSceneElements()
-    const existing = elements.find(element => element.id === dialog?.elementId && element.type === 'image') as ExcalidrawImageElement | undefined
+    const elements = editor.getSceneElementsIncludingDeleted()
+    const existing = elements.find(element => !element.isDeleted && element.id === dialog?.elementId && element.type === 'image') as ExcalidrawImageElement | undefined
     editor.addFiles([{ id: fileId, dataURL: fileData, mimeType: 'image/svg+xml', created: Date.now(), lastRetrieved: Date.now() }])
     let element: ExcalidrawImageElement
     if (existing) {
@@ -67,7 +67,7 @@ export const Canvas = forwardRef<CanvasHandle, { tab: ProjectTab; theme: 'light'
   }
 
   return <div className="canvas-container" onDoubleClickCapture={event => {
-    if (pointerCode.current) { event.preventDefault(); event.stopPropagation(); editCode(pointerCode.current) }
+    if (event.target instanceof HTMLCanvasElement && pointerCode.current) { event.preventDefault(); event.stopPropagation(); editCode(pointerCode.current) }
   }}>
     <Excalidraw
       excalidrawAPI={instance => { api.current = instance }}

@@ -10,7 +10,7 @@ export function serialize(scene: Scene): string {
 }
 
 export function newProject(): void {
-  const scene: Scene = { elements: [], appState: { viewBackgroundColor: '#faf9f6', gridSize: null }, files: {} }
+  const scene: Scene = { elements: [], appState: { viewBackgroundColor: '#faf9f6', gridModeEnabled: false }, files: {} }
   const used = new Set(useProjects.getState().tabs.map(tab => tab.title))
   let index = 1
   while (used.has(`Sem título ${index}`)) index++

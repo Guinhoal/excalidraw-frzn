@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types/types'
+import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 
 export interface Scene {

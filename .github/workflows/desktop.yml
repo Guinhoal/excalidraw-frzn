@@ -1,0 +1,40 @@
+name: Desktop Windows
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-and-package:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund
+      - name: Testar arquivos e SVG
+        run: npm test
+      - name: Compilar e verificar integração desktop
+        run: npm run test:smoke
+      - name: Gerar instalador Windows
+        run: npx electron-builder --win nsis
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Disponibilizar instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: Excalidraw-FRZN-Windows
+          path: release/*.exe
+      - name: Guardar captura e dependências resolvidas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-validation
+          path: |
+            test-results/
+            package-lock.json
+          if-no-files-found: ignore

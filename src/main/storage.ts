@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import type { ProjectEntry } from '../shared/contracts'
 
 export function safeTitle(title: string): string {
-  const name = title.replace(/\.excalidraw$/i, '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/[. ]+$/g, '').trim().slice(0, 100)
+  const name = title.trim().replace(/\.excalidraw$/i, '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').trim().slice(0, 100).replace(/[. ]+$/g, '')
   return !name || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name) ? 'Sem título' : name
 }
 
