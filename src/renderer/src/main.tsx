@@ -4,8 +4,6 @@ import { App } from './App'
 import '@excalidraw/excalidraw/index.css'
 import './styles.css'
 
-window.EXCALIDRAW_ASSET_PATH = import.meta.env.DEV ? '/': './'
-
 class ErrorBoundary extends React.Component<React.PropsWithChildren, { error?: string }> {
   state: { error?: string } = {}
   static getDerivedStateFromError(error: Error) { return { error: error.message } }

@@ -75,7 +75,15 @@ npm run pack          # diretório do aplicativo sem instalador
 
 Depois de `npm run pack` no Windows x64, abra `release\win-unpacked\Excalidraw FRZN.exe`. Se quiser mover o aplicativo, copie a pasta `win-unpacked` inteira para o destino definitivo antes de fixar o ícone na barra de tarefas.
 
-Para fixar o aplicativo instalado, abra Excalidraw FRZN pelo menu Iniciar, clique com o botão direito no ícone da barra de tarefas e escolha **Fixar na barra de tarefas**. Uma tag de versão como `v0.1.0` aciona o workflow para anexar o instalador ao GitHub Releases depois dos testes.
+Para fixar o aplicativo instalado, abra Excalidraw FRZN pelo menu Iniciar, clique com o botão direito no ícone da barra de tarefas e escolha **Fixar na barra de tarefas**.
+
+O workflow publica um instalador numerado no GitHub Releases após os testes de cada push na branch padrão ou em uma tag `v*`. O aplicativo consulta a última publicação ao abrir e a cada hora. O botão **Verificar atualizações** faz a consulta imediatamente. Quando há uma compilação mais nova, **Atualização disponível** abre a página para baixar o instalador. Instalações locais feitas fora do workflow recebem o número de compilação zero. Em repositórios privados, a consulta aceita um token de leitura do repositório pela variável de ambiente `FRZN_UPDATE_TOKEN`.
+
+## Desenhos e notas
+
+- Use **Nova pasta** na lista de projetos para criar pastas e subpastas. Em **Novo desenho**, informe o nome e selecione a pasta de destino. O botão **+** na barra de abas abre um rascunho.
+- No quadro, **Nova nota** cria um cartão com texto, fonte, tamanho e cor do papel. Dê dois cliques na nota para editar o texto. O menu do quadro também tem **Escrever vários textos** para manter a ferramenta de texto ativa entre inserções.
+- O botão **Ampliar área de desenho** ao lado de **Código** coloca o quadro em tela cheia. Use o mesmo botão para voltar.
 
 O instalador associa a extensão `.excalidraw` ao aplicativo. O projeto não inclui certificado de assinatura; versões distribuídas publicamente devem configurar a assinatura do executável. O empacotamento para macOS/Linux não foi configurado nesta versão.
 

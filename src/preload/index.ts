@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { DesktopAPI, OpenedProject } from '../shared/contracts'
 
 const api: DesktopAPI = {
+  checkUpdate: () => ipcRenderer.invoke('release:check'),
+  createFolder: (parent, name) => ipcRenderer.invoke('workspace:mkdir', parent, name),
   workspace: () => ipcRenderer.invoke('workspace:get'),
   chooseWorkspace: () => ipcRenderer.invoke('workspace:choose'),
   open: path => ipcRenderer.invoke('project:open', path),

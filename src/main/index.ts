@@ -1,7 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { atomicWrite, authorizeWorkspaceFile, createProject, readTree, safeTitle } from './storage'
+import { atomicWrite, authorizeWorkspaceFile, createFolder, createProject, readTree, safeTitle, workspaceDirectory } from './storage'
+import { checkUpdate } from './updates'
 import { MAX_SCENE_BYTES, validateScene } from '../shared/scene'
 import type { OpenedProject, Session } from '../shared/contracts'
 
@@ -54,6 +55,11 @@ function registerIPC(): void {
     })
   }
   handle('workspace:get', async () => ({ root, entries: await readTree(root) }))
+  handle('workspace:mkdir', (parent: string, name: string) => createFolder(root, parent, name))
+  handle('release:check', async () => {
+    const metadata = JSON.parse(await fs.readFile(path.join(app.getAppPath(), 'package.json'), 'utf8'))
+    return checkUpdate(Number(metadata.frznBuild || 0))
+  })
   handle('workspace:choose', async () => {
     const result = await dialog.showOpenDialog(window!, { title: 'Escolher pasta de projetos', defaultPath: root, properties: ['openDirectory', 'createDirectory'] })
     if (result.canceled) return null
@@ -71,7 +77,7 @@ function registerIPC(): void {
     if (result.canceled) return []
     return Promise.all(result.filePaths.map(readProject))
   })
-  handle('project:save', async (input: { path?: string; title: string; content: string; saveAs?: boolean }) => {
+  handle('project:save', async (input: { path?: string; directory?: string; title: string; content: string; saveAs?: boolean }) => {
     if (!input || typeof input.content !== 'string' || typeof input.title !== 'string') throw new Error('Dados de projeto inválidos.')
     validateScene(input.content)
     let target = input.path
@@ -86,7 +92,8 @@ function registerIPC(): void {
       if (!authorized.has(target)) throw new Error('Abra o arquivo antes de salvá-lo.')
       await atomicWrite(target, input.content)
     } else {
-      target = await createProject(root, input.title, input.content)
+      const directory = input.directory ? await workspaceDirectory(root, input.directory) : root
+      target = await createProject(directory, input.title, input.content)
       authorized.add(target)
     }
     return target

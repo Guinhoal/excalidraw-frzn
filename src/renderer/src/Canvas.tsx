@@ -1,8 +1,10 @@
 import { forwardRef, lazy, memo, Suspense, useCallback, useImperativeHandle, useRef, useState } from 'react'
-import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, MainMenu, viewportCoordsToSceneCoords } from '@excalidraw/excalidraw'
+import { flushSync } from 'react-dom'
+import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, FONT_FAMILY, MainMenu, viewportCoordsToSceneCoords } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI, AppState, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawImageElement, FileId } from '@excalidraw/excalidraw/element/types'
-import { Code2, Maximize2, Minimize2, Pencil } from 'lucide-react'
+import { Code2, Maximize2, Minimize2, Pencil, StickyNote, Type } from 'lucide-react'
+import { NoteDialog, type NoteOptions } from './NoteDialog'
 import { isCodeData, renderCode, type CodeData } from './code'
 import { serialize } from './projects'
 import { useProjects } from './store'
@@ -25,6 +27,23 @@ export const Canvas = memo(forwardRef<CanvasHandle, CanvasProps>(function Canvas
   const pointerCode = useRef<string | null>(null)
   const [initialScene] = useState(() => useProjects.getState().tabs.find(tab => tab.id === tabId)!.scene)
   const firstChange = useRef(true)
+  const [noteOpen, setNoteOpen] = useState(false)
+  const insertNote = ({ text, background, font, size }: NoteOptions) => {
+    const editor = api.current
+    if (!editor) return
+    const state = editor.getAppState()
+    const center = viewportCoordsToSceneCoords({ clientX: state.offsetLeft + state.width / 2, clientY: state.offsetTop + state.height / 2 }, state)
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(background.slice(i, i + 2), 16))
+    const ink = (r * 299 + g * 587 + b * 114) / 1000 > 145 ? '#181818' : '#ffffff'
+    const elements = convertToExcalidrawElements([{
+      type: 'rectangle', x: center.x - 150, y: center.y - 65, width: 300, height: 130,
+      backgroundColor: background, fillStyle: 'solid', roughness: 0, strokeColor: 'transparent',
+      label: { text, fontFamily: FONT_FAMILY[font], fontSize: size, strokeColor: ink, textAlign: 'left', verticalAlign: 'middle' }
+    }])
+    editor.setActiveTool({ type: 'selection' })
+    editor.updateScene({ elements: [...editor.getSceneElementsIncludingDeleted(), ...elements],
+      appState: { selectedElementIds: { [elements[0].id]: true } }, captureUpdate: CaptureUpdateAction.IMMEDIATELY })
+  }
 
   useImperativeHandle(ref, () => ({ addCode: () => setDialog({}) }), [])
 
@@ -73,7 +92,15 @@ export const Canvas = memo(forwardRef<CanvasHandle, CanvasProps>(function Canvas
     editor.setActiveTool({ type: 'selection' })
   }
 
-  return <div className="canvas-container" onDoubleClickCapture={event => {
+  return <div className="canvas-container" onPointerDownCapture={event => {
+    const editor = api.current
+    if (event.button !== 0 || !(event.target instanceof HTMLCanvasElement) || !editor) return
+    const state = editor.getAppState()
+    if (state.activeTool.type === 'text' && !state.editingTextElement && Object.keys(state.selectedElementIds).length) {
+      // Excalidraw prioritizes the previous selection over the location of a new text click.
+      flushSync(() => editor.updateScene({ appState: { selectedElementIds: {} }, captureUpdate: CaptureUpdateAction.NEVER }))
+    }
+  }} onDoubleClickCapture={event => {
     if (event.target instanceof HTMLCanvasElement && pointerCode.current) { event.preventDefault(); event.stopPropagation(); editCode(pointerCode.current) }
   }}>
     <Excalidraw
@@ -87,6 +114,7 @@ export const Canvas = memo(forwardRef<CanvasHandle, CanvasProps>(function Canvas
       UIOptions={{ canvasActions: { loadScene: false, saveToActiveFile: false, toggleTheme: false, export: { saveFileToDisk: true } } }}
       renderTopRightUI={() => (
         <div className="canvas-actions">
+          <button className="canvas-button" aria-label="Nova nota" title="Nova nota" onClick={() => setNoteOpen(true)}><StickyNote size={16}/></button>
           {selectedCode && <button className="canvas-button" onClick={() => editCode(selectedCode)}><Pencil size={15}/> Editar código</button>}
           <button className="canvas-button" onClick={() => setDialog({})}><Code2 size={16}/> Código</button>
           <button className="canvas-button" aria-label={fullscreen ? 'Sair da tela cheia' : 'Ampliar área de desenho'} title={fullscreen ? 'Sair da tela cheia (Esc)' : 'Ampliar área de desenho'} onClick={onToggleFullscreen}>
@@ -96,6 +124,7 @@ export const Canvas = memo(forwardRef<CanvasHandle, CanvasProps>(function Canvas
       )}
     >
       <MainMenu>
+        <MainMenu.Item icon={<Type size={16}/>} onSelect={() => api.current?.setActiveTool({ type: 'text', locked: true })}>Escrever vários textos</MainMenu.Item>
         <MainMenu.DefaultItems.Export/>
         <MainMenu.DefaultItems.SaveAsImage/>
         <MainMenu.DefaultItems.Help/>
@@ -104,6 +133,7 @@ export const Canvas = memo(forwardRef<CanvasHandle, CanvasProps>(function Canvas
         <MainMenu.DefaultItems.ChangeCanvasBackground/>
       </MainMenu>
     </Excalidraw>
+    {noteOpen && <NoteDialog onInsert={insertNote} onClose={() => setNoteOpen(false)}/>}
     {dialog && <Suspense fallback={<div className="loading-overlay">Carregando editor de código…</div>}><CodeDialog initial={dialog.initial} editing={!!dialog.elementId} onClose={() => setDialog(null)} onSave={insertCode}/></Suspense>}
   </div>
 }))

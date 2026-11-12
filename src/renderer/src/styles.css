@@ -24,3 +24,16 @@
 .main-workspace:fullscreen > .statusbar {
   display: none;
 }
+.release-notice { display: flex; align-items: center; gap: 10px; margin: 0 12px 0 auto; font-size: 12px; }
+.release-notice a { text-decoration: none; }
+.workspace-dialog { width: min(430px, 90vw); border: 1px solid #444; border-radius: 12px; background: #1c1c1c; color: #eee; padding: 24px; }
+.workspace-dialog::backdrop { background: #0009; }
+.workspace-dialog h2 { margin: 0 0 6px; font-size: 18px; }
+.workspace-dialog form, .workspace-dialog label { display: grid; gap: 8px; }
+.workspace-dialog form { gap: 18px; }
+.workspace-dialog input, .workspace-dialog select, .workspace-dialog textarea { min-width: 0; font: inherit; color: inherit; background: #151515; border: 1px solid #555; border-radius: 5px; padding: 8px; }
+.workspace-dialog textarea { resize: vertical; }
+.workspace-dialog input[type=color] { width: 100%; min-height: 35px; padding: 3px; }
+.note-format { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 10px; }
+.form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.workspace-dialog [role=alert] { color: #ffb8bd; margin: 0; }

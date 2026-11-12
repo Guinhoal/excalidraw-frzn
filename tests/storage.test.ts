@@ -3,8 +3,22 @@ import assert from 'node:assert/strict'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import { atomicWrite, authorizeWorkspaceFile, createProject, readTree, safeTitle } from '../src/main/storage.ts'
+import { atomicWrite, authorizeWorkspaceFile, createFolder, createProject, readTree, safeTitle, workspaceDirectory } from '../src/main/storage.ts'
 import { validateScene } from '../src/shared/scene.ts'
+
+test('organiza desenhos em subpastas e rejeita destinos externos e nomes duplicados', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'frzn-tree-'))
+  t.after(() => fs.rm(root, { recursive: true, force: true }))
+  await createFolder(root, root, 'Equipe')
+  const parent = path.join(root, 'Equipe')
+  await createFolder(root, parent, 'Notas')
+  const folder = await workspaceDirectory(root, path.join(parent, 'Notas'))
+  await createProject(folder, 'Reunião', '{}')
+  assert.equal((await readTree(root))[0].children?.[0].children?.[0].name, 'Reunião.excalidraw')
+  await assert.rejects(createFolder(root, parent, 'Notas'))
+  await assert.rejects(createFolder(root, parent, '../Fora'))
+  await assert.rejects(workspaceDirectory(root, path.dirname(root)))
+})
 
 test('novos projetos concorrentes recebem nomes únicos sem sobrescrever conteúdo', async t => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'frzn-test-'))

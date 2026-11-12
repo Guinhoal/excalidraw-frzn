@@ -57,3 +57,26 @@ export async function authorizeWorkspaceFile(root: string, requested: string): P
   }
   return realFile
 }
+
+export async function workspaceDirectory(root: string, requested: string): Promise<string> {
+  const [base, folder] = await Promise.all([fs.realpath(root), fs.realpath(requested)])
+  const relative = path.relative(base, folder)
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) || !(await fs.stat(folder)).isDirectory()) {
+    throw new Error('Escolha uma pasta dentro do espaço de trabalho.')
+  }
+  return folder
+}
+
+export async function createFolder(root: string, parent: string, name: string): Promise<void> {
+  const directory = await workspaceDirectory(root, parent)
+  const trimmed = name.trim()
+  if (!trimmed || trimmed.startsWith('.') || safeTitle(trimmed) !== trimmed) throw new Error('Nome de pasta inválido.')
+  if (path.relative(await fs.realpath(root), directory).split(path.sep).filter(Boolean).length >= 8) {
+    throw new Error('O limite é de oito níveis de subpastas.')
+  }
+  try { await fs.mkdir(path.join(directory, trimmed)) }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('Já existe uma pasta ou arquivo com esse nome.')
+    throw error
+  }
+}

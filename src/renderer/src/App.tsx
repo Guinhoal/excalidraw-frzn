@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Check, ChevronDown, ChevronRight, Circle, Code2, File, FilePlus2, Folder, FolderOpen, HardDrive, Layers3, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Save, Search, Sun, X } from 'lucide-react'
+import { ArrowUpRight, Check, ChevronDown, ChevronRight, Circle, Code2, File, FilePlus2, Folder, FolderOpen, FolderPlus, HardDrive, Layers3, Moon, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Save, Search, Sun, X } from 'lucide-react'
 import brandLogo from './assets/brand/frzn-lockup-horizontal.svg'
+import { ProjectDialog } from './ProjectDialog'
+import { UpdateNotice } from './UpdateNotice'
 import { Canvas, type CanvasHandle } from './Canvas'
-import { flushProjects, isDirty, newProject, openProjects, persistSession, saveProject } from './projects'
+import { blankScene, flushProjects, isDirty, newProject, openProjects, persistSession, saveProject, serialize } from './projects'
 import { useProjects } from './store'
 import type { ProjectEntry, WorkspaceInfo } from '../../shared/contracts'
 
@@ -27,6 +29,7 @@ export function App() {
   const [sidebar, setSidebar] = useState(true)
   const workspaceElement = useRef<HTMLElement>(null)
   const [fullscreen, setFullscreen] = useState(false)
+  const [creating, setCreating] = useState<'file' | 'folder' | null>(null)
   const [filter, setFilter] = useState('')
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [ready, setReady] = useState(false)
@@ -126,7 +129,7 @@ export function App() {
       if (['s', 'o', 'n', 'w', 'tab'].includes(key)) event.preventDefault()
       if (key === 's') void run(() => save(event.shiftKey))
       if (key === 'o') void run(() => open())
-      if (key === 'n') newProject()
+      if (key === 'n') setCreating('file')
       if (key === 'w') void run(() => closeTab(useProjects.getState().activeId))
       if (key === 'tab') {
         const state = useProjects.getState()
@@ -147,15 +150,25 @@ export function App() {
         <img src={brandLogo} alt="FRZN" />
         <span>Excalidraw</span>
       </div>
+      <UpdateNotice/>
       <button className="icon-button" aria-label={theme === 'light' ? 'Ativar canvas escuro' : 'Ativar canvas claro'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
         {theme === 'light' ? <Moon size={17}/> : <Sun size={17}/>}
       </button>
     </header>
+    {creating && workspace && <ProjectDialog kind={creating} workspace={workspace} onClose={() => setCreating(null)} onCreate={async (directory, name) => {
+      if (creating === 'folder') await window.desktop.createFolder(directory, name)
+      else {
+        const content = serialize(blankScene())
+        const path = await window.desktop.save({ directory, title: name, content })
+        if (path) await openProjects([{ path, content }])
+      }
+      await refresh()
+    }}/>}
     <div className="app-body">
       {sidebar && <aside className="sidebar"><div className="workspace-heading"><span>ESPAÇO DE TRABALHO</span><button className="icon-button" aria-label="Recolher projetos" onClick={() => setSidebar(false)}><PanelLeftClose size={16}/></button></div><button className="workspace-picker" title={workspace?.root} onClick={() => void run(async () => { const selected = await window.desktop.chooseWorkspace(); if (selected) setWorkspace(selected) })}><span className="folder-badge"><FolderOpen size={19}/></span><div><strong>{workspace?.root.split(/[\\/]/).at(-1) || 'Meus projetos'}</strong><small>Pasta local <ArrowUpRight size={11}/></small></div><ChevronDown size={14}/></button>
-        <button className="button new-project" onClick={newProject}><Plus size={17}/> Novo desenho<span>Ctrl N</span></button>
+        <button className="button new-project" disabled={!workspace} onClick={() => setCreating('file')}><Plus size={17}/> Novo desenho<span>Ctrl N</span></button>
         <label className="search-box"><Search size={15}/><input aria-label="Buscar projetos" placeholder="Buscar um projeto…" value={filter} onChange={event => setFilter(event.target.value)}/></label>
-        <div className="project-list-heading"><span>PROJETOS</span><div><button className="icon-button" aria-label="Abrir projeto" title="Abrir projeto (Ctrl+O)" onClick={() => void run(() => open())}><FolderOpen size={15}/></button><button className="icon-button" aria-label="Atualizar projetos" onClick={() => void run(refresh)}><RefreshCw size={14}/></button></div></div>
+        <div className="project-list-heading"><span>PROJETOS</span><div><button className="icon-button" title="Nova pasta" aria-label="Nova pasta" disabled={!workspace} onClick={() => setCreating('folder')}><FolderPlus size={15}/></button><button className="icon-button" aria-label="Abrir projeto" title="Abrir projeto (Ctrl+O)" onClick={() => void run(() => open())}><FolderOpen size={15}/></button><button className="icon-button" aria-label="Atualizar projetos" onClick={() => void run(refresh)}><RefreshCw size={14}/></button></div></div>
         <nav className="project-tree" aria-label="Projetos locais"><Tree entries={workspace?.entries || []} filter={filter} activePath={active?.path} open={path => void run(() => open(path))}/>{!workspace?.entries.length && <div className="empty-projects"><FilePlus2 size={26}/><p>Ideias merecem espaço.</p><span>Crie seu primeiro desenho.<br/>Ele será salvo nesta pasta.</span></div>}</nav>
         <div className="sidebar-bottom"><div><HardDrive size={17}/><strong>Local por natureza</strong><span className="status-dot"/></div><p>Desenhos e código juntos.<br/>Sem conta, prontos para ficar com você.</p></div>
       </aside>}

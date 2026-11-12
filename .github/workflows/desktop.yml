@@ -21,7 +21,7 @@ jobs:
       - name: Compilar e verificar integração desktop
         run: npm run test:smoke
       - name: Gerar instalador Windows
-        run: npx electron-builder --win nsis --publish never
+        run: npx electron-builder --win nsis --publish never --config.extraMetadata.frznBuild=${{ github.run_number }} --config.nsis.artifactName=Excalidraw-FRZN-build-${{ github.run_number }}.exe
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - name: Disponibilizar instalador
@@ -39,7 +39,7 @@ jobs:
             package-lock.json
           if-no-files-found: ignore
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && (github.ref_name == github.event.repository.default_branch || startsWith(github.ref, 'refs/tags/v'))
     needs: validate-and-package
     runs-on: ubuntu-latest
     permissions:
@@ -52,4 +52,16 @@ jobs:
       - name: Disponibilizar instalador no GitHub Releases
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" installer/*.exe --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          if [[ "$GITHUB_REF_TYPE" == branch ]]; then
+            head=$(gh api "repos/$GITHUB_REPOSITORY/commits/$DEFAULT_BRANCH" --jq .sha)
+            [[ "$head" == "$GITHUB_SHA" ]] || exit 0
+            tag="desktop-$GITHUB_RUN_NUMBER"
+          fi
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" installer/*.exe --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" installer/*.exe --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest --title "Excalidraw FRZN · build $GITHUB_RUN_NUMBER" --generate-notes
+          fi
