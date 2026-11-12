@@ -11,7 +11,7 @@ export default defineConfig({
   preload: { plugins: [externalizeDepsPlugin()] },
   renderer: {
     plugins: [react()],
-    build: { chunkSizeWarningLimit: 2500 },
+    build: { chunkSizeWarningLimit: 2500, license: { fileName: 'THIRD-PARTY-LICENSES.md' } },
     server: {
       fs: { allow: [resolve('.')] }
     }

@@ -6,11 +6,16 @@
   "author": "Thiago Arthur",
   "license": "MIT",
   "scripts": {
+    "electron:check": "node scripts/check-electron.cjs",
+    "electron:repair": "node scripts/repair-electron.cjs",
+    "predev": "npm run electron:check",
     "dev": "electron-vite dev",
+    "prepreview": "npm run electron:check",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && electron-vite build",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "pretest:smoke": "npm run electron:check",
     "test:smoke": "npm run build && tsx scripts/smoke.ts",
     "dist": "npm run build && electron-builder --win nsis",
     "dist:portable": "npm run build && electron-builder --win portable",
@@ -42,11 +47,14 @@
   "build": {
     "appId": "com.frzn.excalidraw",
     "productName": "Excalidraw FRZN",
+    "electronDist": "node_modules/electron/dist",
+    "npmRebuild": false,
+    "extraResources": [{ "from": "licenses", "to": "licenses" }],
     "directories": { "output": "release" },
-    "files": ["out/**/*", "package.json"],
+    "files": ["out/**/*", "package.json", "!node_modules/**/*"],
     "asar": true,
     "win": { "target": ["nsis"], "signAndEditExecutable": false },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true },
     "fileAssociations": [{ "ext": "excalidraw", "name": "Desenho Excalidraw", "role": "Editor" }]
   }
 }

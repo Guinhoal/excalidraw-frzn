@@ -32,9 +32,17 @@ export const useProjects = create<State>((set) => ({
   tabs: [], activeId: '',
   activate: activeId => set({ activeId }),
   add: tab => set(state => ({ tabs: [...state.tabs, tab], activeId: tab.id })),
-  update: (id, scene, serialized) => set(state => ({ tabs: state.tabs.map(tab => tab.id === id ? {
-    ...tab, scene, serialized, revision: tab.revision + Number(tab.serialized !== serialized)
-  } : tab) })),
+  update: (id, scene, serialized) => set(state => {
+    const current = state.tabs.find(tab => tab.id === id)
+    if (!current) return state
+    const changed = current.serialized !== serialized
+    const previous = current.scene.appState
+    const next = scene.appState
+    if (!changed && previous.scrollX === next.scrollX && previous.scrollY === next.scrollY && previous.zoom?.value === next.zoom?.value) return state
+    return { tabs: state.tabs.map(tab => tab.id === id ? {
+      ...tab, scene, serialized, revision: tab.revision + Number(changed)
+    } : tab) }
+  }),
   patch: (id, values) => set(state => ({ tabs: state.tabs.map(tab => tab.id === id ? { ...tab, ...values } : tab) })),
   remove: id => set(state => {
     const index = state.tabs.findIndex(tab => tab.id === id)

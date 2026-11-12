@@ -1,22 +1,21 @@
-import { forwardRef, lazy, Suspense, useCallback, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, lazy, memo, Suspense, useCallback, useImperativeHandle, useRef, useState } from 'react'
 import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, MainMenu, viewportCoordsToSceneCoords } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI, AppState, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawImageElement, FileId } from '@excalidraw/excalidraw/element/types'
 import { Code2, Pencil } from 'lucide-react'
 import { isCodeData, renderCode, type CodeData } from './code'
 import { serialize } from './projects'
-import { useProjects, type ProjectTab } from './store'
+import { useProjects } from './store'
 
 const CodeDialog = lazy(() => import('./CodeDialog').then(module => ({ default: module.CodeDialog })))
 export interface CanvasHandle { addCode(): void }
 
-export const Canvas = forwardRef<CanvasHandle, { tab: ProjectTab; theme: 'light' | 'dark' }>(function Canvas({ tab, theme }, ref) {
+export const Canvas = memo(forwardRef<CanvasHandle, { tabId: string; title: string; theme: 'light' | 'dark' }>(function Canvas({ tabId, title, theme }, ref) {
   const api = useRef<ExcalidrawImperativeAPI | null>(null)
   const [dialog, setDialog] = useState<{ elementId?: string; initial?: CodeData } | null>(null)
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
   const pointerCode = useRef<string | null>(null)
-  const tabId = tab.id
-  const initialScene = useRef(tab.scene)
+  const [initialScene] = useState(() => useProjects.getState().tabs.find(tab => tab.id === tabId)!.scene)
   const firstChange = useRef(true)
 
   useImperativeHandle(ref, () => ({ addCode: () => setDialog({}) }), [])
@@ -71,12 +70,12 @@ export const Canvas = forwardRef<CanvasHandle, { tab: ProjectTab; theme: 'light'
   }}>
     <Excalidraw
       excalidrawAPI={instance => { api.current = instance }}
-      initialData={initialScene.current}
+      initialData={initialScene}
       onChange={onChange}
       onPointerDown={(_tool, state) => { pointerCode.current = state.hit.element && isCodeData(state.hit.element.customData) ? state.hit.element.id : null }}
       theme={theme}
       langCode="pt-BR"
-      name={tab.title}
+      name={title}
       UIOptions={{ canvasActions: { loadScene: false, saveToActiveFile: false, toggleTheme: false, export: { saveFileToDisk: true } } }}
       renderTopRightUI={() => <div className="canvas-actions">{selectedCode && <button className="canvas-button" onClick={() => editCode(selectedCode)}><Pencil size={15}/> Editar código</button>}<button className="canvas-button" onClick={() => setDialog({})}><Code2 size={16}/> Código</button></div>}
     >
@@ -91,4 +90,4 @@ export const Canvas = forwardRef<CanvasHandle, { tab: ProjectTab; theme: 'light'
     </Excalidraw>
     {dialog && <Suspense fallback={<div className="loading-overlay">Carregando editor de código…</div>}><CodeDialog initial={dialog.initial} editing={!!dialog.elementId} onClose={() => setDialog(null)} onSave={insertCode}/></Suspense>}
   </div>
-})
+}))

@@ -13,6 +13,28 @@ npm run dev
 
 A primeira instalação precisa de internet para baixar os pacotes e o Electron. Depois de compilado, o editor, as fontes, o Monaco, seus workers e o realce de código são incluídos no aplicativo. Links externos e bibliotecas públicas do Excalidraw exigem conexão.
 
+### Erro `Electron uninstall`
+
+Esse erro indica que o pacote npm existe, mas o executável do Electron ou seu `path.txt` não foi instalado. O rebuild pode terminar com sucesso sem baixar nada se `ELECTRON_SKIP_BINARY_DOWNLOAD` estiver definida, inclusive com o valor `0`.
+
+```powershell
+npm run electron:repair
+npm run dev
+```
+
+O reparo baixa o runtime usando `@electron/get`, confere o SHA-256 incluído no pacote Electron, extrai o ZIP e registra o executável somente após conferir os arquivos e a versão. Ele não executa `install.js`, cujas saídas antecipadas podem terminar sem instalar o runtime. Não altera variáveis permanentes do Windows nem apaga projetos. `npm run electron:check` faz somente a verificação; ela também roda antes de `dev`, `preview` e do smoke.
+
+Se o download pelo Node falhar, o comando exibe o endereço do ZIP oficial para a versão e arquitetura instaladas. Baixe pelo navegador e informe o caminho completo:
+
+```powershell
+npm run electron:repair -- --zip "C:\Users\SEU_USUARIO\Downloads\electron-v39.8.10-win32-x64.zip"
+npm run dev
+```
+
+O ZIP manual também tem seu SHA-256 validado antes da extração. Use exatamente a versão e arquitetura indicadas pelo comando.
+
+No Windows, o reparo usa o `tar.exe` nativo e mostra os nomes dos arquivos durante a extração. O ZIP válido do cache é reutilizado nas novas tentativas. Se um reparo antigo ficar repetindo apenas `Reparo em andamento...`, interrompa com Ctrl+C e execute o comando atualizado. A extração nativa tem limite de três minutos e encerra o processo extrator em caso de timeout; Ctrl+C também cancela a operação. A instalação só é registrada depois que a extração termina e os arquivos são conferidos.
+
 ## O que está implementado
 
 - Canvas oficial: desenho livre, formas, setas, texto, imagens e exportação do Excalidraw.
@@ -51,12 +73,14 @@ npm run dist:portable # executável portátil Windows em release/
 npm run pack          # diretório do aplicativo sem instalador
 ```
 
+Para fixar o aplicativo instalado, abra Excalidraw FRZN pelo menu Iniciar, clique com o botão direito no ícone da barra de tarefas e escolha **Fixar na barra de tarefas**. Uma tag de versão como `v0.1.0` aciona o workflow para anexar o instalador ao GitHub Releases depois dos testes.
+
 O instalador associa a extensão `.excalidraw` ao aplicativo. O projeto não inclui certificado de assinatura; versões distribuídas publicamente devem configurar a assinatura do executável. O empacotamento para macOS/Linux não foi configurado nesta versão.
 
 ## Validação
 
 ```powershell
-npm test             # testes de arquivos, acesso a pastas, validação de cenas e SVG; só precisa do Node 24
+npm test             # testes de arquivos, acesso a pastas, validação de cenas e SVG; inclui regressão do canvas com Zustand instalado
 npm run typecheck    # precisa das dependências instaladas
 npm run test:smoke   # build e teste real do Electron com Playwright
 ```

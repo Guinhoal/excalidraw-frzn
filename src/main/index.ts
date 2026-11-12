@@ -154,6 +154,7 @@ function createWindow(): void {
 }
 
 const locked = app.requestSingleInstanceLock()
+if (process.platform === 'win32') app.setAppUserModelId('com.frzn.excalidraw')
 if (!locked) app.quit()
 else {
   app.on('second-instance', (_event, argv) => {

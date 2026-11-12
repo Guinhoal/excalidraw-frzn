@@ -36,7 +36,10 @@ async function main(): Promise<void> {
   const workspace = path.join(root, 'projects')
   const userData = path.join(root, 'settings')
   await fs.mkdir(workspace)
-  const env: Record<string, string | undefined> = { ...process.env, FRZN_TEST_DATA: userData, FRZN_TEST_WORKSPACE: workspace }
+  const env: Record<string, string> = Object.fromEntries(
+    Object.entries({ ...process.env, FRZN_TEST_DATA: userData, FRZN_TEST_WORKSPACE: workspace })
+      .filter((entry): entry is [string, string] => entry[1] !== undefined)
+  )
   delete env.ELECTRON_RUN_AS_NODE
   const errors: string[] = []
   let app: ElectronApplication | undefined
