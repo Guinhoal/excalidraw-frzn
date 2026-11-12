@@ -2,7 +2,7 @@ import { forwardRef, lazy, memo, Suspense, useCallback, useImperativeHandle, use
 import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, MainMenu, viewportCoordsToSceneCoords } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI, AppState, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawImageElement, FileId } from '@excalidraw/excalidraw/element/types'
-import { Code2, Pencil } from 'lucide-react'
+import { Code2, Maximize2, Minimize2, Pencil } from 'lucide-react'
 import { isCodeData, renderCode, type CodeData } from './code'
 import { serialize } from './projects'
 import { useProjects } from './store'
@@ -10,7 +10,15 @@ import { useProjects } from './store'
 const CodeDialog = lazy(() => import('./CodeDialog').then(module => ({ default: module.CodeDialog })))
 export interface CanvasHandle { addCode(): void }
 
-export const Canvas = memo(forwardRef<CanvasHandle, { tabId: string; title: string; theme: 'light' | 'dark' }>(function Canvas({ tabId, title, theme }, ref) {
+interface CanvasProps {
+  tabId: string
+  title: string
+  theme: 'light' | 'dark'
+  fullscreen: boolean
+  onToggleFullscreen(): void
+}
+
+export const Canvas = memo(forwardRef<CanvasHandle, CanvasProps>(function Canvas({ tabId, title, theme, fullscreen, onToggleFullscreen }, ref) {
   const api = useRef<ExcalidrawImperativeAPI | null>(null)
   const [dialog, setDialog] = useState<{ elementId?: string; initial?: CodeData } | null>(null)
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
@@ -77,7 +85,15 @@ export const Canvas = memo(forwardRef<CanvasHandle, { tabId: string; title: stri
       langCode="pt-BR"
       name={title}
       UIOptions={{ canvasActions: { loadScene: false, saveToActiveFile: false, toggleTheme: false, export: { saveFileToDisk: true } } }}
-      renderTopRightUI={() => <div className="canvas-actions">{selectedCode && <button className="canvas-button" onClick={() => editCode(selectedCode)}><Pencil size={15}/> Editar código</button>}<button className="canvas-button" onClick={() => setDialog({})}><Code2 size={16}/> Código</button></div>}
+      renderTopRightUI={() => (
+        <div className="canvas-actions">
+          {selectedCode && <button className="canvas-button" onClick={() => editCode(selectedCode)}><Pencil size={15}/> Editar código</button>}
+          <button className="canvas-button" onClick={() => setDialog({})}><Code2 size={16}/> Código</button>
+          <button className="canvas-button" aria-label={fullscreen ? 'Sair da tela cheia' : 'Ampliar área de desenho'} title={fullscreen ? 'Sair da tela cheia (Esc)' : 'Ampliar área de desenho'} onClick={onToggleFullscreen}>
+            {fullscreen ? <Minimize2 size={16}/> : <Maximize2 size={16}/>}
+          </button>
+        </div>
+      )}
     >
       <MainMenu>
         <MainMenu.DefaultItems.Export/>

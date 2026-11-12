@@ -49,11 +49,11 @@
     "productName": "Excalidraw FRZN",
     "electronDist": "node_modules/electron/dist",
     "npmRebuild": false,
-    "extraResources": [{ "from": "licenses", "to": "licenses" }],
+    "extraResources": [{ "from": "licenses", "to": "licenses" }, { "from": "build/frzn.ico", "to": "frzn.ico" }],
     "directories": { "output": "release" },
     "files": ["out/**/*", "package.json", "!node_modules/**/*"],
     "asar": true,
-    "win": { "target": ["nsis"], "signAndEditExecutable": false },
+    "win": { "target": ["nsis"], "icon": "build/frzn.ico", "signExecutable": false },
     "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true },
     "fileAssociations": [{ "ext": "excalidraw", "name": "Desenho Excalidraw", "role": "Editor" }]
   }

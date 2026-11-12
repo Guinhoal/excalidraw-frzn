@@ -114,7 +114,8 @@ function createWindow(): void {
   rendererReady = false
   window = new BrowserWindow({
     title: 'Excalidraw FRZN', width: 1440, height: 940, minWidth: 960, minHeight: 650,
-    backgroundColor: '#141517', show: false, autoHideMenuBar: true,
+    icon: app.isPackaged ? path.join(process.resourcesPath, 'frzn.ico') : path.join(app.getAppPath(), 'build', 'frzn.ico'),
+    backgroundColor: '#141414', show: false, autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, '../preload/index.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   })
   window.once('ready-to-show', () => window?.show())

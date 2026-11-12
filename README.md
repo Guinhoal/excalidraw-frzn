@@ -73,6 +73,8 @@ npm run dist:portable # executável portátil Windows em release/
 npm run pack          # diretório do aplicativo sem instalador
 ```
 
+Depois de `npm run pack` no Windows x64, abra `release\win-unpacked\Excalidraw FRZN.exe`. Se quiser mover o aplicativo, copie a pasta `win-unpacked` inteira para o destino definitivo antes de fixar o ícone na barra de tarefas.
+
 Para fixar o aplicativo instalado, abra Excalidraw FRZN pelo menu Iniciar, clique com o botão direito no ícone da barra de tarefas e escolha **Fixar na barra de tarefas**. Uma tag de versão como `v0.1.0` aciona o workflow para anexar o instalador ao GitHub Releases depois dos testes.
 
 O instalador associa a extensão `.excalidraw` ao aplicativo. O projeto não inclui certificado de assinatura; versões distribuídas publicamente devem configurar a assinatura do executável. O empacotamento para macOS/Linux não foi configurado nesta versão.
