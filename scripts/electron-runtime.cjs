@@ -52,7 +52,7 @@ async function restoreElectron(directory, options = {}) {
     version: current.version, artifactName: 'electron', platform, arch,
     checksums, force: false,
     cacheRoot: path.join(os.tmpdir(), 'excalidraw-frzn-electron-cache'),
-    downloadOptions: { quiet: true, timeout: { request: 120000 }, retry: { limit: 0 }, signal: options.signal }
+    downloadOptions: { signal: options.signal }
   };
   if (!archive) {
     downloadArtifact = options.downloadArtifact || fromElectron('@electron/get').downloadArtifact;
@@ -72,7 +72,7 @@ async function restoreElectron(directory, options = {}) {
     throw new Error(`SHA-256 inválido. Use o ZIP oficial ${artifact}; nenhum arquivo foi extraído.`);
   }
   const extract = options.extract || (platform === 'win32' && process.platform === 'win32'
-    ? extractWithWindowsTar : fromElectron('extract-zip'));
+    ? extractWithWindowsTar : fromElectron('@electron-internal/extract-zip').extract);
   const dist = path.join(directory, 'dist');
   await fs.promises.mkdir(dist, { recursive: true });
   log(platform === 'win32' ? 'Extraindo com o tar.exe nativo do Windows...' : 'Extraindo o Electron...');

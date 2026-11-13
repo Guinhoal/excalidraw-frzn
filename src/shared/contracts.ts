@@ -7,8 +7,13 @@ export interface ProjectEntry {
 export interface OpenedProject { path: string; content: string }
 export interface WorkspaceInfo { root: string; entries: ProjectEntry[] }
 export interface Session { paths: string[]; activePath?: string }
+export type UpdateStatus =
+  | { state: 'current'; build: number }
+  | { state: 'available'; build: number; url: string }
+  | { state: 'unavailable'; message: string }
+
 export interface DesktopAPI {
-  checkUpdate(): Promise<{ build: number; url: string } | null>
+  checkUpdate(): Promise<UpdateStatus>
   createFolder(parent: string, name: string): Promise<void>
   workspace(): Promise<WorkspaceInfo>
   chooseWorkspace(): Promise<WorkspaceInfo | null>

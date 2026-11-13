@@ -44,8 +44,11 @@ async function main(): Promise<void> {
   const errors: string[] = []
   let app: ElectronApplication | undefined
   const launch = async () => {
-    const instance = await electron.launch({ args: [path.resolve('out/main/index.js')], env })
-    const page = await instance.firstWindow()
+    const instance = await electron.launch({ args: [path.resolve('.')], env, timeout: 30000 })
+    app = instance
+    const page = await instance.firstWindow({ timeout: 30000 })
+    page.setDefaultTimeout(15000)
+    page.on('console', message => { if (message.type() === 'error') console.error(message.text().slice(0, 500)) })
     page.on('pageerror', error => errors.push(error.message))
     await page.route(/^https?:/, route => route.abort())
     await page.getByRole('tab').first().waitFor()
@@ -85,7 +88,7 @@ async function main(): Promise<void> {
     await page.locator('dialog').waitFor({ state: 'detached' })
     await page.locator('.new-project').click()
     await page.getByLabel('Nome', { exact: true }).fill('Planejamento')
-    await page.getByLabel('Criar em').selectOption({ label: 'Reuniões' })
+    await page.getByRole('combobox', { name: 'Criar em' }).selectOption({ label: 'Reuniões' })
     await page.getByRole('button', { name: 'Criar', exact: true }).click()
     await page.getByRole('tab', { name: 'Planejamento' }).waitFor()
     const canvas = page.locator('.canvas-wrap')
@@ -107,6 +110,8 @@ async function main(): Promise<void> {
     assert.ok(fontsLoaded, 'As fontes do desenho devem carregar offline')
     await page.getByRole('button', { name: 'Sair da tela cheia' }).click()
     await page.getByRole('tab', { name: 'Planejamento' }).waitFor()
+    // A separate blank canvas makes these clicks independent of monitor size and the position of the earlier note.
+    await page.getByRole('button', { name: 'Nova aba', exact: true }).click()
     await page.getByTestId('main-menu-trigger').click()
     await page.getByText('Escrever vários textos', { exact: true }).click()
     const area = await canvas.boundingBox()
@@ -119,8 +124,9 @@ async function main(): Promise<void> {
       await input.press('Control+Enter')
       await input.waitFor({ state: 'detached' })
     }
-    await waitFor(async () => JSON.parse(await fs.readFile(file, 'utf8')).elements as { text?: string }[],
-      elements => ['Primeiro texto', 'Segundo texto'].every(word => elements.some(el => el.text === word)), 'dois textos independentes')
+    await waitFor(readScenes,
+      docs => docs.some(doc => ['Primeiro texto', 'Segundo texto'].every(word =>
+        doc.scene.elements.some((el: { text?: string }) => el.text === word))), 'dois textos independentes')
     await page.getByRole('button', { name: 'Ampliar área de desenho' }).click()
     await page.getByRole('button', { name: 'Espaço de trabalho', exact: true }).click()
     await page.getByRole('button', { name: 'Novo bloco de notas' }).click()
@@ -143,7 +149,7 @@ async function main(): Promise<void> {
     await close(app); app = undefined
     console.log('Smoke OK: canvas, Monaco offline, código SVG, autosave, abas, edição e restauração.')
   } finally {
-    if (app) await app.close()
+    if (app) app.process().kill()
     // The test owns this freshly created temporary directory only.
     await fs.rm(root, { recursive: true, force: true })
   }

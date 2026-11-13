@@ -2,12 +2,17 @@
 
 Aplicativo desktop para Windows com o motor oficial do Excalidraw, vários desenhos em abas e blocos de código que podem ser editados depois. Interface em português, arquivos locais e sem cadastro.
 
+## Instalar no Windows
+
+Abra a [última release](https://github.com/Guinhoal/excalidraw-frzn/releases/latest) e baixe o instalador `Excalidraw-FRZN-build-N.exe` em **Assets**. O aplicativo consulta novas versões ao abrir, a cada hora e pelo botão **Verificar atualizações**. O aviso abre a release para você instalar. Os desenhos e notas ficam na pasta de projetos.
+
 ## Executar
 
 Instale o **Node.js 24 LTS**. Na pasta do repositório:
 
 ```powershell
-npm install
+npm ci
+npx --no-install install-electron
 npm run dev
 ```
 
@@ -27,7 +32,7 @@ O reparo baixa o runtime usando `@electron/get`, confere o SHA-256 incluído no 
 Se o download pelo Node falhar, o comando exibe o endereço do ZIP oficial para a versão e arquitetura instaladas. Baixe pelo navegador e informe o caminho completo:
 
 ```powershell
-npm run electron:repair -- --zip "C:\Users\SEU_USUARIO\Downloads\electron-v39.8.10-win32-x64.zip"
+npm run electron:repair -- --zip "C:\Users\SEU_USUARIO\Downloads\electron-v45.3.1-win32-x64.zip"
 npm run dev
 ```
 
@@ -77,7 +82,7 @@ Depois de `npm run pack` no Windows x64, abra `release\win-unpacked\Excalidraw F
 
 Para fixar o aplicativo instalado, abra Excalidraw FRZN pelo menu Iniciar, clique com o botão direito no ícone da barra de tarefas e escolha **Fixar na barra de tarefas**.
 
-O workflow publica um instalador numerado no GitHub Releases após os testes de cada push na branch padrão ou em uma tag `v*`. O aplicativo consulta a última publicação ao abrir e a cada hora. O botão **Verificar atualizações** faz a consulta imediatamente. Quando há uma compilação mais nova, **Atualização disponível** abre a página para baixar o instalador. Instalações locais feitas fora do workflow recebem o número de compilação zero. Em repositórios privados, a consulta aceita um token de leitura do repositório pela variável de ambiente `FRZN_UPDATE_TOKEN`.
+Para publicar pelo GitHub, abra [Actions → Desktop Windows](https://github.com/Guinhoal/excalidraw-frzn/actions/workflows/desktop.yml), clique em **Run workflow**, selecione **main** e confirme. Um push na branch padrão também inicia o processo. Quando testes, auditoria e empacotamento passam, o job **release** publica um instalador em **Releases**. O número do build no arquivo é o mesmo gravado no aplicativo, inclusive quando a versão do produto não mudou. Se apenas o artifact do Actions existir, o aplicativo ainda aguarda a release. Em repositórios públicos a consulta dispensa token. Para distribuição privada, o processo principal aceita `FRZN_UPDATE_TOKEN` com leitura de conteúdo.
 
 ## Desenhos e notas
 
@@ -99,7 +104,7 @@ npm run test:smoke   # build e teste real do Electron com Playwright
 
 O smoke usa uma pasta temporária isolada: insere dois cards, verifica o autosave e imagens nos JSONs, alterna abas, edita um card por duplo clique, fecha imediatamente e reabre para conferir a sessão. Guarda uma captura em `test-results/workspace.png`.
 
-O workflow `Desktop Windows` executa essas verificações e gera o instalador como artifact em pushes, pull requests ou execução manual. Após a primeira instalação bem-sucedida, versione o `package-lock.json` gerado para fixar as versões transitivas e troque `npm install` por `npm ci` no workflow.
+O workflow `Desktop Windows` executa essas verificações e gera o instalador como artifact em pushes, pull requests ou execução manual.
 
 ## Organização
 
